@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,RTFSC,Retrofit,Cache,OkHttp," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="liucong's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="这一篇主要是写自定义缓存现有方案的具体实现。  背景因为某些原因，最近APP使用的服务器压力激增，高峰期的时候APP经常请求失败。这个项目在我接手之前是已经做过缓存的，只是这个缓存做的很简单并不能达到效果。要达到的效果是：缓存有效时间为24H，缓存未过期时不请求服务器而是直接使用缓存，过期后请求网络然后刷新缓存。">
+<meta name="keywords" content="Android,RTFSC,Retrofit,Cache,OkHttp">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Retrofit+RxJava自定义缓存实现踩坑记录.">
+<meta property="og:url" content="http:www.iliucong.tech/2018/12/22/costom-cache-implementation-in-retrofit-and-rxjava/index.html">
+<meta property="og:site_name" content="liucong&#39;s blog">
+<meta property="og:description" content="这一篇主要是写自定义缓存现有方案的具体实现。  背景因为某些原因，最近APP使用的服务器压力激增，高峰期的时候APP经常请求失败。这个项目在我接手之前是已经做过缓存的，只是这个缓存做的很简单并不能达到效果。要达到的效果是：缓存有效时间为24H，缓存未过期时不请求服务器而是直接使用缓存，过期后请求网络然后刷新缓存。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://raw.githubusercontent.com/wiki/square/okhttp/interceptors@2x.png">
+<meta property="og:updated_time" content="2018-12-21T16:00:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Retrofit+RxJava自定义缓存实现踩坑记录.">
+<meta name="twitter:description" content="这一篇主要是写自定义缓存现有方案的具体实现。  背景因为某些原因，最近APP使用的服务器压力激增，高峰期的时候APP经常请求失败。这个项目在我接手之前是已经做过缓存的，只是这个缓存做的很简单并不能达到效果。要达到的效果是：缓存有效时间为24H，缓存未过期时不请求服务器而是直接使用缓存，过期后请求网络然后刷新缓存。">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/wiki/square/okhttp/interceptors@2x.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.2',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+
+
+
+
+  <title>Retrofit+RxJava自定义缓存实现踩坑记录. | liucong's blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?af10b37fe74fba1f6cc0867121ad1cf2";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">liucong's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http:www.iliucong.tech/2018/12/22/costom-cache-implementation-in-retrofit-and-rxjava/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="liucong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://upload-images.jianshu.io/upload_images/9395318-b6b38add955841db.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="liucong's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Retrofit+RxJava自定义缓存实现踩坑记录.</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-12-22T00:00:00+08:00">
+                2018-12-22
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-12-22T00:00:00+08:00">
+                2018-12-22
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Tech/" itemprop="url" rel="index">
+                    <span itemprop="name">Tech</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>这一篇主要是写自定义缓存现有方案的具体实现。</p>
+</blockquote>
+<h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>因为某些原因，最近APP使用的服务器压力激增，高峰期的时候APP经常请求失败。这个项目在我接手之前是已经做过缓存的，只是这个缓存做的很简单并不能达到效果。要达到的效果是：缓存有效时间为24H，缓存未过期时不请求服务器而是直接使用缓存，过期后请求网络然后刷新缓存。</p>
+<a id="more"></a>
+<h3 id="实现1"><a href="#实现1" class="headerlink" title="实现1"></a>实现1</h3><p>项目中使用Retrofit+OkHttpClient用来请求网络的。而且OkHttp默认是提供缓存的，而这个缓存说白了就是依赖响应头中的缓存控制字段的值。然而有些服务器并不支持或者没有返回这个字段，所以就统一通过Interceptor在响应头中将需要缓存数据的请求的缓存过期时间设置为24小时。然而有些请求是不能缓存的，所以需要将这些请求的缓存过期时间给设置为0。</p>
+<p>而OkHttpClient在创建的时候是可以加两种Interceptor的。一种是Application Interceptor一种是Network Interceptor。区别可以看下面这张图:</p>
+<p><img src="https://raw.githubusercontent.com/wiki/square/okhttp/interceptors@2x.png" alt=""></p>
+<p>我们需要添加两种Interceptor，以便对缓存进行处理。</p>
+<p>为什么需要添加两种呢？</p>
+<p>通过上图或者查看源码可以知道，两种Interceptor中间加了一种CacheInterceptor，这个顾名思义应该是处理缓存的，而这个缓存则是根据响应体中的缓存控制字段来决定是重新发起请求还是使用缓存。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">interceptors.addAll(client.interceptors());</span><br><span class="line">...</span><br><span class="line">interceptors.add(<span class="keyword">new</span> CacheInterceptor(client.internalCache()));</span><br><span class="line">...</span><br><span class="line"><span class="keyword">if</span> (!forWebSocket) &#123;</span><br><span class="line">    interceptors.addAll(client.networkInterceptors());</span><br><span class="line">&#125;</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>CacheInterceptor工作原理是，在请求时请求链被CacheInterceptor这个拦截器后，CacheInterceptor会检查是否有缓存，如果有并且缓存未过期则根据缓存构建一个Response并返回，后续的请求链就不会继续了。如果无缓存或者缓存已经过期就会将请求传递给请求链上后续处理者继续执行。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">long</span> now = System.currentTimeMillis();</span><br><span class="line">CacheStrategy strategy = <span class="keyword">new</span> CacheStrategy.Factory(now, chain.request(), cacheCandidate).get();</span><br><span class="line">Request networkRequest = strategy.networkRequest;</span><br><span class="line">Response cacheResponse = strategy.cacheResponse;</span><br><span class="line"></span><br><span class="line"><span class="comment">//如果有缓存并且缓存未过期 直接构建一个Response并返回获取。请求链到了这里就执行完成了，剩下的直接将响应返回回去。</span></span><br><span class="line"><span class="keyword">if</span> (networkRequest == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> cacheResponse.newBuilder()</span><br><span class="line">       .cacheResponse(stripBody(cacheResponse))</span><br><span class="line">       .build();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//如果没有缓存或者缓存已经过期了 就直接让后续的处理者继续处理。</span></span><br><span class="line">Response networkResponse = <span class="keyword">null</span>;</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    networkResponse = chain.proceed(networkRequest);</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在响应的时候，响应链上的响应被CacheInterceptor拦截后会根据一些策略来判断是否应该缓存。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (HttpHeaders.hasBody(response) &amp;&amp; CacheStrategy.isCacheable(response, networkRequest)) &#123;</span><br><span class="line">    CacheRequest cacheRequest = cache.put(response);</span><br><span class="line">    <span class="keyword">return</span> cacheWritingResponse(cacheRequest, response);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> (HttpMethod.invalidatesCache(networkRequest.method())) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        cache.remove(networkRequest);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException ignored) &#123;</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>需要注意的是，如果请求方法是POST、PUT等等则还需要将前面缓存的数据删除。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">invalidatesCache</span><span class="params">(String method)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> method.equals(<span class="string">"POST"</span>)</span><br><span class="line">        || method.equals(<span class="string">"PATCH"</span>)</span><br><span class="line">        || method.equals(<span class="string">"PUT"</span>)</span><br><span class="line">        || method.equals(<span class="string">"DELETE"</span>)</span><br><span class="line">        || method.equals(<span class="string">"MOVE"</span>);     <span class="comment">// WebDAV</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>所以，需要添加Network Interceptor这种拦截器在请求成功时强制改变缓存过期时间，以便下次请求同样的接口时CacheInterceptor使用缓存而不是真正去请求网络。添加Application Interceptor这种拦截器在请求之前设置一些缓存策略例如<code>CacheControl.FORCE_CACHE</code>以便在没网络的时候即使缓存过期也还是强制使用缓存。正常情况下这个Interceptor是不会干预请求的，具体是重新请求网络刷新缓存还是直接使用缓存则是看响应头的过期时间设置了。</p>
+<p>接下来就是这两种Interceptor的具体实现了。</p>
+<p>首先是Application Interceptor。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Interceptor mOfflineCacheControlInterceptor = <span class="keyword">new</span> Interceptor() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Response <span class="title">intercept</span><span class="params">(Chain chain)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        Request request = chain.request();</span><br><span class="line">        <span class="keyword">if</span>(!NetUtil.isNetworkConnected())&#123;</span><br><span class="line">            <span class="comment">//没有网络 强制从缓存里面读取 </span></span><br><span class="line">            <span class="comment">//如果没有缓存就会出现503错误</span></span><br><span class="line">            requestBuilder.cacheControl(CacheControl.FORCE_CACHE);</span><br><span class="line">        &#125;</span><br><span class="line">        request = requestBuilder.build();</span><br><span class="line">        <span class="keyword">return</span> chain.proceed(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>接着是Network Interceptor。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> Interceptor mNetCacheInterceptor  = <span class="keyword">new</span> Interceptor() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Response <span class="title">intercept</span><span class="params">(Chain chain)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line"></span><br><span class="line">        Request request = chain.request();</span><br><span class="line">        <span class="comment">//请求</span></span><br><span class="line">        Response originalResponse = chain.proceed(request);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//根据请求的url设定缓存过期时间</span></span><br><span class="line">        <span class="keyword">int</span> maxAge = HttpCacheManager.getInstance().maxAge(request.url().toString());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> originalResponse.newBuilder()</span><br><span class="line">            .header(<span class="string">"Cache-Control"</span>, <span class="string">"public, max-age="</span>+maxAge)</span><br><span class="line">            .removeHeader(<span class="string">"Pragma"</span>)</span><br><span class="line">            .build();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>其中具体缓存时间如何确定则是将这个策略抽取出来，以便后续方便扩展。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//HttpCacheManager.java</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxAge</span><span class="params">(String url)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(mStrategy == <span class="keyword">null</span>)&#123;</span><br><span class="line">        mStrategy = <span class="keyword">new</span> DefaultCacheStrategy();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> mStrategy.maxAge(url);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//DefaultCacheStrategy.java</span></span><br><span class="line"><span class="comment">//implements HttpCacheManager.CacheStrategy</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxAge</span><span class="params">(String request)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(excludeUrls.contains(request))&#123;</span><br><span class="line">        <span class="comment">//不需要或者不能做缓存</span></span><br><span class="line">        <span class="comment">//缓存时间为0</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">        <span class="comment">//缓存时间为24H</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">24</span>*<span class="number">60</span>*<span class="number">60</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后在构造OkHttpClient的时候将这两个Interceptor添加进去。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">mOkHttpClient = <span class="keyword">new</span> OkHttpClient.Builder()</span><br><span class="line">    ...</span><br><span class="line">    .addInterceptor(mOfflineCacheControlInterceptor)</span><br><span class="line">    .addNetworkInterceptor(mNetCacheInterceptor)</span><br><span class="line">    ...</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
+<p>这样的话就能达到预期效果了。</p>
+<h3 id="实现2"><a href="#实现2" class="headerlink" title="实现2"></a>实现2</h3><p>上面的缓存使用了一段时间后发现存在一些问题的。在使用过程中如果需要对缓存有一些额外的想法就直接歇菜了。</p>
+<p>因此就萌生了自己搞一套缓存方案。</p>
+<p>在看了Retrofit的源码之后发现实现CallFactory不现实，因此可以在CallAdapterFactory上面入手，自己实现一个CallAdapterFactory，用来代理RxJavaCallAdapterFactory(因为项目只使用了RxJavaCallAdapterFactory而没有使用其他CallAdapterFactory)。</p>
+<p>在adapt的时候检查缓存，如果有缓存并且缓存没过期就自己创建一个Observable并返回；如果没有缓存或者缓存失效则直接的使用RxJavaCallAdapterFactory的CallAdapter返回的Observable，然后对其进行变换。变换代码做的事情就是拿到解析后的数据并保存在数据库。</p>
+<p>下面是具体的实现。</p>
+<p>首先是CallAdapterFactory，自己实现的这个CallAdapterFactory是作为RxJavaCallAdapterFactory的一种代理，真正去干活的还是RxJavaCallAdapterFactory创建的CallAdapter。主要重写的是get方法，这个方法是用来获取能adapt传入的返回类型的CallAdapter实例。这里是用RxJavaCallAdapterFactory的get方法获取一个CallAdapter实例，然后我们使用静态代理模式创建一个CallAdapter，这个CallAdapter持有RxJavaCallAdapterFactory创建的CallAdapter。然后重写adapt方法。在这个方法里面首先根据请求的URL从缓存里面读取，如果有缓存就直接创建一个Observable并返回；如果没有缓存就直接使用RxjavaCallAdapterFactory创建的CallAdapter进行adapt后返回一个Observable，然后对这个Observable进行变换，变换代码做的事情就是保存缓存数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CacheCallAdapterFactory</span> <span class="keyword">extends</span> <span class="title">CallAdapter</span>.<span class="title">Factory</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> RxJavaCallAdapterFactory sDelegate = RxJavaCallAdapterFactory.create();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">CacheCallAdapterFactory</span><span class="params">()</span></span>&#123;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CacheCallAdapterFactory <span class="title">create</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> CacheCallAdapterFactory();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> CallAdapter&lt;?&gt; get(Type returnType, Annotation[] annotations, Retrofit retrofit) &#123;</span><br><span class="line">        CallAdapter&lt;?&gt; result = <span class="keyword">null</span>;</span><br><span class="line">        CallAdapter&lt;?&gt; callAdapter = sDelegate.get(returnType, annotations, retrofit);</span><br><span class="line">        <span class="comment">//RxJava里面会根据接口返回类型总共可以创建4种CallAdapter，因为项目中所有的接口方法都会返回同一种CallAdapter，所以这里就假定只会返回一种CallAdapter，即ProxySimpleCallAdapter。</span></span><br><span class="line">        <span class="keyword">if</span>(callAdapter != <span class="keyword">null</span>)&#123;</span><br><span class="line">            Class&lt;?&gt; rawType = getRawType(returnType);</span><br><span class="line">            String canonicalName = rawType.getCanonicalName();</span><br><span class="line">            <span class="keyword">boolean</span> isSingle = <span class="string">"rx.Single"</span>.equals(canonicalName);</span><br><span class="line">            <span class="keyword">boolean</span> isCompletable = <span class="string">"rx.Completable"</span>.equals(canonicalName);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span>(isCompletable) &#123;</span><br><span class="line">                <span class="comment">//CompletableCallAdapter</span></span><br><span class="line">                result = <span class="keyword">new</span> ProxyCompletableCallAdapter(callAdapter);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">if</span>(isSingle)&#123;</span><br><span class="line">                    <span class="comment">//SingleCallAdapter</span></span><br><span class="line">                    result = <span class="keyword">new</span> ProxySingleCallAdapter(callAdapter);</span><br><span class="line">                &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                    Type observableType = getParameterUpperBound(<span class="number">0</span>, (ParameterizedType)returnType);</span><br><span class="line">                    Class&lt;?&gt; rawObservableType = getRawType(observableType);</span><br><span class="line">                    <span class="keyword">if</span>(rawObservableType == Response.class)&#123;</span><br><span class="line">                        <span class="comment">//ResponseCallAdapter</span></span><br><span class="line">                        result = <span class="keyword">new</span> ProxyResponseCallAdapter(callAdapter);</span><br><span class="line">                    &#125;<span class="keyword">else</span> <span class="keyword">if</span>(rawObservableType == Result.class)&#123;</span><br><span class="line">                        <span class="comment">//ResultCallAdapter</span></span><br><span class="line">                        result = <span class="keyword">new</span> ProxyResultCallAdapter(callAdapter);</span><br><span class="line">                    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                        <span class="comment">//SimpleCallAdapter</span></span><br><span class="line">                        result = <span class="keyword">new</span> ProxySimpleCallAdapter(callAdapter);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>RxJava里面会根据接口返回类型总共可以创建4种CallAdapter，因为项目中所有的接口方法都会返回同一种CallAdapter，所以这里就假定只会返回一种CallAdapter，即ProxySimpleCallAdapter。</p>
+<p>ProxySimpleCallAdapter作为SimpleCallAdapter的代理对象，在adapt的时候会去获取缓存。如果能拿到缓存，则说明这个缓存没有过期或者已过期但是可以忽略过期。然后构建一个已经定义好订阅时发送的消息序列(解析缓存数据、回调)的Observable然后返回。如果没能拿到缓存则直接使用SimpleCallAdapter的adapt来返回一个Observable然后对这个Observable进行变换保存数据。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">ProxySimpleCallAdapter</span> <span class="keyword">implements</span> <span class="title">CallAdapter</span>&lt;<span class="title">Observable</span>&lt;?&gt;&gt;</span>&#123;</span><br><span class="line">    <span class="keyword">private</span> CallAdapter&lt;?&gt; delegate;</span><br><span class="line"></span><br><span class="line">    ProxySimpleCallAdapter(CallAdapter&lt;?&gt; delegate)&#123;</span><br><span class="line">        <span class="keyword">this</span>.delegate = delegate;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Type <span class="title">responseType</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> delegate.responseType();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> &lt;R&gt; <span class="function">Observable&lt;R&gt; <span class="title">adapt</span><span class="params">(Call&lt;R&gt; call)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        Request request = call.request();</span><br><span class="line">        String url = request.url().toString();</span><br><span class="line">        <span class="comment">//把url当做是key</span></span><br><span class="line">        <span class="comment">// TODO 在这里查看是否有缓存</span></span><br><span class="line">        <span class="keyword">final</span> String cache = HttpCacheManager.getInstance().getCache(request.url().toString(), <span class="keyword">false</span>);</span><br><span class="line">        <span class="comment">// TODO 如果有就直接构建一个我们自己的Observable</span></span><br><span class="line">        <span class="keyword">if</span>(!TextUtils.isEmpty(cache))&#123;</span><br><span class="line">            <span class="keyword">return</span> Observable.create(<span class="keyword">new</span> Observable.OnSubscribe&lt;R&gt;() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">call</span><span class="params">(Subscriber&lt;? <span class="keyword">super</span> R&gt; subscriber)</span> </span>&#123;</span><br><span class="line">                    <span class="comment">//解析</span></span><br><span class="line">                    R response = HttpManagerNew.getInstance().getGson().fromJson(cache,responseType());</span><br><span class="line">                    subscriber.onNext(response);</span><br><span class="line">                    subscriber.onCompleted();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// TODO 如果没有就直接使用RxJavaCallAdapter然后进行变换</span></span><br><span class="line">        <span class="keyword">return</span> ((Observable&lt;R&gt;) delegate.adapt(call)).lift(<span class="keyword">new</span> CacheOperator(responseType(),request));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>接下来看具体的变换。</p>
+<p>主要是onError方法和onNext方法。</p>
+<p>onError中会判断错误对象是否是HttpException类型，如果是说明是在请求过程中出现的异常，所以这个时候就使用缓存了，如果有就解析然后回到掉回去否则直接回到错误。</p>
+<p>onNext方法中会将服务器返回的数据反序列化后回调到这里，然后我们又重新序列化成字符串然后将url和这个序列化后的数据保存在数据库中，实际上是否保存则是由HttpCacheManager来决定的，并且保存时会将请求对应的方法上面的缓存注解上的缓存事件也一并保存到数据库。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">CacheOperator</span>&lt;<span class="title">R</span>&gt; <span class="keyword">implements</span> <span class="title">Observable</span>.<span class="title">Operator</span>&lt;<span class="title">R</span>,<span class="title">R</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Type responseType;</span><br><span class="line">    <span class="keyword">private</span> Request request;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">CacheOperator</span><span class="params">(Type responseType, Request request)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.responseType = responseType;</span><br><span class="line">        <span class="keyword">this</span>.request = request;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Subscriber&lt;? <span class="keyword">super</span> R&gt; call(<span class="keyword">final</span> Subscriber&lt;? <span class="keyword">super</span> R&gt; subscriber) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Subscriber&lt;R&gt;() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCompleted</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                </span><br><span class="line">                subscriber.onCompleted();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable e)</span> </span>&#123;</span><br><span class="line">               </span><br><span class="line">                <span class="keyword">if</span>(e <span class="keyword">instanceof</span> HttpException)&#123;</span><br><span class="line">                    <span class="comment">//这个是请求过程中出错，例如连接超时</span></span><br><span class="line">                    <span class="comment">//在这里也尝试从缓存里面读取，如果有的话。</span></span><br><span class="line">                    <span class="comment">//TODO 通过url拿到缓存</span></span><br><span class="line">                    String cache = HttpCacheManager.getInstance().getCache(request.url().toString(), <span class="keyword">true</span>);</span><br><span class="line">                    <span class="comment">//TODO 解析缓存</span></span><br><span class="line">                    <span class="keyword">if</span>(cache != <span class="keyword">null</span>)&#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            R response = HttpManagerNew.getInstance().getGson().fromJson(cache,responseType);</span><br><span class="line">                            <span class="comment">//TODO 回调结果</span></span><br><span class="line">                            subscriber.onNext(response);</span><br><span class="line">                            <span class="keyword">return</span>;</span><br><span class="line">                        &#125;<span class="keyword">catch</span> (Exception ex)&#123;</span><br><span class="line"></span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">//回调错误</span></span><br><span class="line">                subscriber.onError(e);</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNext</span><span class="params">(R r)</span> </span>&#123;</span><br><span class="line">				</span><br><span class="line">                subscriber.onNext(r);</span><br><span class="line"></span><br><span class="line">                <span class="comment">//完成数据回调后 缓存数据。</span></span><br><span class="line">                String url = request.url().toString();</span><br><span class="line">                String method = request.method();</span><br><span class="line"></span><br><span class="line">                <span class="comment">//如果不是GET请求</span></span><br><span class="line">                <span class="keyword">if</span>(!TextUtils.equals(method, <span class="string">"GET"</span>))&#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="comment">//TODO 1.拿到当前请求的方法的缓存注解</span></span><br><span class="line">                    <span class="comment">//TODO 2.判断是否需要缓存</span></span><br><span class="line">                    <span class="comment">//TODO 3.如果需要缓存就直接缓存</span></span><br><span class="line">                    String response = <span class="keyword">new</span> Gson().toJson(r,responseType);</span><br><span class="line">                    HttpCacheManager.getInstance().addCache(url,response);</span><br><span class="line">                &#125;<span class="keyword">catch</span> (Exception ex)&#123;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后是注解Cache，这个注解用来标记请求接口是否缓存以及缓存时长。</p>
+<blockquote>
+<p>主要有两个方法：</p>
+<p>一个是缓存有效时间，提供默认值24小时。</p>
+<p>一个是缓存策略，分为网络优先和缓存优先。这两种缓存策略具体效果后面会讲到。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target</span>(METHOD)</span><br><span class="line"><span class="meta">@Retention</span>(RUNTIME)</span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Cache &#123;</span><br><span class="line">    <span class="comment">//缓存有效时间 默认24小时</span></span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">cacheAlive</span><span class="params">()</span> <span class="keyword">default</span> 24*60*60</span>;</span><br><span class="line">    <span class="comment">//缓存策略 网络优先或缓存优先</span></span><br><span class="line">    <span class="function">CacheStrategy <span class="title">cacheStrategy</span><span class="params">()</span> <span class="keyword">default</span> CacheStrategy.CACHE_FRIST</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后是缓存，这个缓存具体包含哪些内容以怎样的方式保存。</p>
+<blockquote>
+<p>缓存是用CacheEntry类来描述，主要包含key以及cacheTime和response这三个字段，分别用来存储请求的url、缓存存入时间以及服务器返回的数据。这个是用来存储的单位，可以存到数据库也可以存到硬盘中，这个则视情况而定。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CacheEntry</span> </span>&#123;</span><br><span class="line">    <span class="comment">//url</span></span><br><span class="line">    <span class="keyword">public</span> String key;</span><br><span class="line">    <span class="comment">//缓存存入时间 ms</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> cacheTime;</span><br><span class="line">    <span class="comment">//缓存的内容 NewApiBaseEntity对象转化成的字符串</span></span><br><span class="line">    <span class="keyword">public</span> String response;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>接着是HttpCacheManager，这个是用来管理缓存的，包含缓存存取，缓存过期判断等等。</p>
+<blockquote>
+<p>缓存的具体增删改查则是抽象出一个CacheProvider接口，已经有个使用数据库实现的CacheProvider，当然也可以使用DiskLruCache进行实现。</p>
+<p>然后会解析接口中的方法，解析那些有Cache注解的方法相关数据，然后封装成CacheMethodInfo对象。这个数据在缓存存取时会使用到。方法只有Cache和GET注解时才会缓存。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpCacheManager</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> HashMap&lt;String,CacheMethodInfo&gt; mCacheMethodInfos = <span class="keyword">new</span> HashMap&lt;&gt;() ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> CacheProvider&lt;String,CacheEntry&gt; mCacheProvider;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> CacheProvider&lt;String,CacheEntry&gt; DEFAULT_CACHE_PROVIDER = <span class="keyword">new</span> DatabaseCacheProvider();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">volatile</span> HttpCacheManager INSTANCE = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">HttpCacheManager</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        parseMethods();</span><br><span class="line">        setCacheProvider(DEFAULT_CACHE_PROVIDER);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setCacheProvider</span><span class="params">(@NonNull CacheProvider&lt;String,CacheEntry&gt; cacheProvider)</span></span>&#123;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span>(cacheProvider == mCacheProvider)&#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span>(cacheProvider != <span class="keyword">null</span>)&#123;</span><br><span class="line">            cacheProvider.detach();</span><br><span class="line">        &#125;</span><br><span class="line">        mCacheProvider = cacheProvider;</span><br><span class="line">        mCacheProvider.attach();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> HttpCacheManager <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(INSTANCE == <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (HttpCacheManager.class)&#123;</span><br><span class="line">                <span class="keyword">if</span>(INSTANCE == <span class="keyword">null</span>)&#123;</span><br><span class="line">                    INSTANCE = <span class="keyword">new</span> HttpCacheManager();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> INSTANCE;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 删除缓存</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> key 需要删除的缓存的key</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deleteCache</span><span class="params">(String key)</span></span>&#123;</span><br><span class="line">        mCacheProvider.deleteCache(key);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 清空所有缓存</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clearCache</span><span class="params">()</span></span>&#123;</span><br><span class="line">        mCacheProvider.clearCache();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 从CacheProvider里面读取缓存</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> CacheEntry <span class="title">getCache</span><span class="params">(String key)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">        CacheEntry result = <span class="keyword">null</span>;</span><br><span class="line">        result = mCacheProvider.getCache(key);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 检查缓存是否可用</span></span><br><span class="line"><span class="comment">     * 缓存是否有效是几个条件同时作用，并且几个条件的相互之间也可能会排斥</span></span><br><span class="line"><span class="comment">     * 实际上可以考虑这个判断缓存是否有效逻辑单独抽取出来作为一种策略类来使用，方便以后修改。</span></span><br><span class="line"><span class="comment">     * 缓存数据存在?</span></span><br><span class="line"><span class="comment">     *      - 忽略过期? 可使用缓存</span></span><br><span class="line"><span class="comment">     *      - 不忽略缓存?</span></span><br><span class="line"><span class="comment">     *          - 缓存策略为缓存优先?</span></span><br><span class="line"><span class="comment">     *              - 缓存过期? 禁用缓存</span></span><br><span class="line"><span class="comment">     *              - 缓存未过期? 可使用缓存</span></span><br><span class="line"><span class="comment">     *          - 缓存策略为网络优先?</span></span><br><span class="line"><span class="comment">     *              - 有网络? 禁用缓存</span></span><br><span class="line"><span class="comment">     *              - 无网络? 可使用缓存</span></span><br><span class="line"><span class="comment">     * 缓存数据不存在? 禁用缓存</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">checkCacheAvailable</span><span class="params">(<span class="keyword">boolean</span> ignoreExpired,CacheEntry cache,CacheMethodInfo cacheMethodInfo)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//缓存是否可用</span></span><br><span class="line">        <span class="keyword">boolean</span> available = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>(cache != <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="keyword">if</span>(ignoreExpired)&#123;</span><br><span class="line">                available = <span class="keyword">true</span>;</span><br><span class="line">            &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                <span class="keyword">if</span>(cacheMethodInfo != <span class="keyword">null</span> )&#123;</span><br><span class="line">                    <span class="comment">//缓存策略为缓存优先的时候 是允许使用缓存</span></span><br><span class="line">                    <span class="keyword">if</span>(cacheMethodInfo.getCacheStrategy() == CacheStrategy.CACHE_FRIST)&#123;</span><br><span class="line">                        Logger.d(<span class="string">"缓存优先!"</span>);</span><br><span class="line">                        <span class="comment">//不允许缓存的时候</span></span><br><span class="line">                        <span class="keyword">long</span> currentTime = System.currentTimeMillis();</span><br><span class="line">                        <span class="keyword">long</span> expiredTime = cache.getCacheTime() + cacheMethodInfo.getCacheAlive();</span><br><span class="line">                        available = currentTime &gt; expiredTime;</span><br><span class="line">                    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                        <span class="comment">//网络优先 有网情况下会直接请求网络，无网的时候就会直接使用缓存。</span></span><br><span class="line">                        <span class="comment">//无网络的时候直接强制使用网络。</span></span><br><span class="line">                        available = !NetUtil.isNetworkConnected();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> available;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 获取缓存</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> key</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> ignoreExpired 是否忽略缓存过期限制</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getCache</span><span class="params">(String key,<span class="keyword">boolean</span> ignoreExpired)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">        String cacheResponse = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">        CacheEntry cache = getCache(key);</span><br><span class="line">        CacheMethodInfo methodInfo = findMethodInfoByKey(key);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>(checkCacheAvailable(ignoreExpired,cache,methodInfo))&#123;</span><br><span class="line">            Logger.d(<span class="string">"有缓存!"</span>);</span><br><span class="line">            cacheResponse = cache.getResponse();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> cacheResponse;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 缓存服务器结果</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> method</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> key 缓存的key为url 便于从CacheProvider中查找</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> response 需要缓存到CacheProvider的对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addCache</span><span class="params">(String method,String key,String response)</span></span>&#123;</span><br><span class="line">        <span class="comment">//TODO 添加到缓存</span></span><br><span class="line">        CacheEntry cache = <span class="keyword">new</span> CacheEntry();</span><br><span class="line">        cache.setKey(key);</span><br><span class="line">        cache.setResponse(response);</span><br><span class="line">        cache.setCacheTime(System.currentTimeMillis());</span><br><span class="line">        mCacheProvider.updateCache(key,cache);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addCache</span><span class="params">(String key,String response)</span></span>&#123;</span><br><span class="line">        <span class="comment">//首先遍历所有的有注解的方法</span></span><br><span class="line">        CacheMethodInfo methodInfo = findMethodInfoByKey(key);</span><br><span class="line">        <span class="keyword">if</span>(methodInfo != <span class="keyword">null</span>)&#123;</span><br><span class="line">            addCache(methodInfo.getMethodName(),key,response);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> CacheMethodInfo <span class="title">findMethodInfoByKey</span><span class="params">(String key)</span> </span>&#123;</span><br><span class="line">        CacheMethodInfo result = <span class="keyword">null</span>;</span><br><span class="line">        log(<span class="string">"根据key找对应方法数据:"</span>+key);</span><br><span class="line">        <span class="keyword">for</span>(CacheMethodInfo method:mCacheMethodInfos.values())&#123;</span><br><span class="line">            <span class="keyword">if</span>(!TextUtils.isEmpty(key) &amp;&amp; key.contains(method.getSubKey()))&#123;</span><br><span class="line">                result = method;</span><br><span class="line">                log(<span class="string">"找到了key对应方法数据:"</span>+result.toString());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//初始化时调用</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">parseMethods</span><span class="params">()</span></span>&#123;</span><br><span class="line">        mCacheMethodInfos.clear();</span><br><span class="line">        Method[] declaredMethods = HttpServiceNew.class.getDeclaredMethods();</span><br><span class="line">        <span class="keyword">for</span>(Method method:declaredMethods)&#123;</span><br><span class="line">            CacheMethodInfo parse = CacheAnnotationProcessor.parse(method);</span><br><span class="line">            <span class="keyword">if</span>(parse != <span class="keyword">null</span>)&#123;</span><br><span class="line">                mCacheMethodInfos.put(method.getName(),parse);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">log</span><span class="params">(String msg)</span></span>&#123;</span><br><span class="line">        Logger.d(<span class="string">"Cache"</span>,msg);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>缓存接口</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">CacheProvider</span>&lt;<span class="title">K</span>,<span class="title">V</span>&gt; </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 添加缓存</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">addCache</span><span class="params">(K key, V cache)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 获取缓存</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function">V <span class="title">getCache</span><span class="params">(K key)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 更新缓存</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">updateCache</span><span class="params">(K key,V t)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 删除缓存</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">deleteCache</span><span class="params">(K key)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 清空所有缓存</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">clearCache</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 是否已经满了</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">isFull</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">attach</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">detach</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>解析接口</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//CacheAnnotationProcessor.java</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CacheMethodInfo <span class="title">parse</span><span class="params">(Method method)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(method == <span class="keyword">null</span>)&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//Object里面的方法</span></span><br><span class="line">    <span class="keyword">if</span> (method.getDeclaringClass() == Object.class) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//正式解析</span></span><br><span class="line">    Cache cacheAnnotation = <span class="keyword">null</span>;</span><br><span class="line">    GET get = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        get = method.getAnnotation(GET.class);</span><br><span class="line">        cacheAnnotation = method.getAnnotation(Cache.class);</span><br><span class="line">    &#125;<span class="keyword">catch</span> (Exception ex)&#123;</span><br><span class="line">        <span class="comment">//这个方法上没有GET注解，说明不是get请求，直接忽略</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(get == <span class="keyword">null</span> || cacheAnnotation == <span class="keyword">null</span>)&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    String relativeUrl = get.value();</span><br><span class="line">    String key = formatKey(relativeUrl);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2.开始解析注解</span></span><br><span class="line">    <span class="comment">//缓存有效时间 为0说明不需要缓存</span></span><br><span class="line">    <span class="keyword">long</span> cacheAlive = cacheAnnotation.cacheAlive();</span><br><span class="line">    <span class="comment">//缓存策略，缓存优先or网络优先</span></span><br><span class="line">    CacheStrategy cacheStrategy = cacheAnnotation.cacheStrategy();</span><br><span class="line"></span><br><span class="line">    <span class="comment">//3.保存数据</span></span><br><span class="line">    CacheMethodInfo info = <span class="keyword">new</span> CacheMethodInfo();</span><br><span class="line">    info.setSubKey(key);</span><br><span class="line">    info.setCacheAlive(cacheAlive);</span><br><span class="line">    info.setMethodName(method.getName());</span><br><span class="line">    info.setCacheStrategy(cacheStrategy);</span><br><span class="line">    <span class="comment">//保存起来</span></span><br><span class="line">    <span class="keyword">return</span> info;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实现2到了这里基本上就介绍完毕了。</p>
+<p>如何使用？</p>
+<p>直接在要缓存的方法上加上Cache注解即可。</p>
+<p>需要注意的是只有当方法是GET请求并且有Cache注解时才会进行缓存。</p>
+<p>缓存是否可用则需要根据网络状态以及响应状态以及缓存时间这些因素共同决定的，具体如何确定上面的代码中有注释。</p>
+<h3 id="实现3"><a href="#实现3" class="headerlink" title="实现3"></a>实现3</h3><p>这套方案只是突然想到的，暂时还没具体实现。</p>
+<p>为什么会想到这个套方案？</p>
+<p>因为在方案2已经实现了后在思考还有哪些地方需要改进的时候，突然想着我为什么非要使用RxJavaCallAdapterFactory呢，如果使用RxJava的话，因为RxJavaCallAdapterFactory是可以创建多种CallAdapter实例的，所以我也需要根据每种CallAdapter来创建对应的代理CallAdapter类，现在的情况就是我已经根据RxJavaCallAdapterFactory创建的每种CallAdapter都创建了对应的CallAdapter代理类但是里面具体缓存保存读取却暂时没有时间，这样想的话实现2的局限性就比较高了，只能缓存Observable<t>这种类型了。</t></p>
+<p>后来我想着，我为什么不完全实现一个CallAdapterFactory呢，而且创建的CallAdapter也完全可以把retrofit2.Call适配成Observable啊。虽然完全实现一个CallAdapterFactory是要花点力气，但是相对于带来的好处是完全值得的。</p>
+<p>初步设想还是使用Observable作为返回类型。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    liucong
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http:www.iliucong.tech/2018/12/22/costom-cache-implementation-in-retrofit-and-rxjava/" title="Retrofit+RxJava自定义缓存实现踩坑记录.">http:www.iliucong.tech/2018/12/22/costom-cache-implementation-in-retrofit-and-rxjava/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag"># Android</a>
+          
+            <a href="/tags/RTFSC/" rel="tag"># RTFSC</a>
+          
+            <a href="/tags/Retrofit/" rel="tag"># Retrofit</a>
+          
+            <a href="/tags/Cache/" rel="tag"># Cache</a>
+          
+            <a href="/tags/OkHttp/" rel="tag"># OkHttp</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/09/Retrofit-optional-parameters-detail/" rel="next" title="Retrofit参数配置.">
+                <i class="fa fa-chevron-left"></i> Retrofit参数配置.
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          
+            <img class="site-author-image" itemprop="image"
+              src="https://upload-images.jianshu.io/upload_images/9395318-b6b38add955841db.jpg"
+              alt="liucong" />
+          
+            <p class="site-author-name" itemprop="name">liucong</p>
+            <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+            
+              <a href="/archives/">
+            
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+       
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="mailto:litchiily@gmail.com" target="_blank" title="E-Mail">
+                  E-Mail</a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现1"><span class="nav-number">2.</span> <span class="nav-text">实现1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现2"><span class="nav-number">3.</span> <span class="nav-text">实现2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现3"><span class="nav-number">4.</span> <span class="nav-text">实现3</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2017 &mdash; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-random"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">liucong</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+  <span class="post-meta-divider">|</span>
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.2</div>
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+  
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

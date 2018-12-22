@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,推送," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="liucong's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="研究发现，大多都是针对不同设备集成不同推送平台，这样在最大限度里保持推送效果。 在知道信鸽可以很方便的集成厂商通道后，果断选择了信鸽。集成完毕后发现信鸽的推送延迟很高，例如单纯用信鸽的推送通道延迟甚至达到几十分钟，简直没谁了。听说个推也可以集成厂商通道，不过没有尝试，暂时先单独集成。等有空自己写个测试项目来测试看看效果。 最后集成方案：  小米华为魅族等等，集成其自己的推送 其他一律接入极光推送">
+<meta name="keywords" content="Android,推送">
+<meta property="og:type" content="article">
+<meta property="og:title" content="项目推送集成">
+<meta property="og:url" content="http:www.iliucong.tech/2018/08/12/push-deploy/index.html">
+<meta property="og:site_name" content="liucong&#39;s blog">
+<meta property="og:description" content="研究发现，大多都是针对不同设备集成不同推送平台，这样在最大限度里保持推送效果。 在知道信鸽可以很方便的集成厂商通道后，果断选择了信鸽。集成完毕后发现信鸽的推送延迟很高，例如单纯用信鸽的推送通道延迟甚至达到几十分钟，简直没谁了。听说个推也可以集成厂商通道，不过没有尝试，暂时先单独集成。等有空自己写个测试项目来测试看看效果。 最后集成方案：  小米华为魅族等等，集成其自己的推送 其他一律接入极光推送">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-08-11T16:00:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="项目推送集成">
+<meta name="twitter:description" content="研究发现，大多都是针对不同设备集成不同推送平台，这样在最大限度里保持推送效果。 在知道信鸽可以很方便的集成厂商通道后，果断选择了信鸽。集成完毕后发现信鸽的推送延迟很高，例如单纯用信鸽的推送通道延迟甚至达到几十分钟，简直没谁了。听说个推也可以集成厂商通道，不过没有尝试，暂时先单独集成。等有空自己写个测试项目来测试看看效果。 最后集成方案：  小米华为魅族等等，集成其自己的推送 其他一律接入极光推送">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.2',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+
+
+
+
+  <title>项目推送集成 | liucong's blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?af10b37fe74fba1f6cc0867121ad1cf2";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">liucong's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http:www.iliucong.tech/2018/08/12/push-deploy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="liucong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://upload-images.jianshu.io/upload_images/9395318-b6b38add955841db.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="liucong's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">项目推送集成</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-08-12T00:00:00+08:00">
+                2018-08-12
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-08-12T00:00:00+08:00">
+                2018-08-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Tech/" itemprop="url" rel="index">
+                    <span itemprop="name">Tech</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>研究发现，大多都是针对不同设备集成不同推送平台，这样在最大限度里保持推送效果。</p>
+<p>在知道信鸽可以很方便的集成厂商通道后，果断选择了信鸽。集成完毕后发现信鸽的推送延迟很高，例如单纯用信鸽的推送通道延迟甚至达到几十分钟，简直没谁了。听说个推也可以集成厂商通道，不过没有尝试，暂时先单独集成。等有空自己写个测试项目来测试看看效果。</p>
+<p>最后集成方案：</p>
+<ul>
+<li>小米华为魅族等等，集成其自己的推送</li>
+<li>其他一律接入极光推送。</li>
+</ul>
+<p>优点是厂商推送服务在对应的设备上是属于系统级服务，APP被杀死了依旧可以收到推送消息。</p>
+<p>缺点也很明显，就是集成特麻烦，后台开发起来也特麻烦。</p>
+<p>PS:公司APP用户中OPPO和VIVO的用户量特大，两者加起来甚至达到了40%。可惜这两家公司，一家暂不开放，一家尚在公测，现在就没法集成了。</p>
+</blockquote>
+<a id="more"></a>
+<blockquote>
+<p>项目中是根据推送中附加的字段来指定跳转页面</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt;url:这个是指定跳转的页面代码</span><br><span class="line">&gt;pars:这个是跳转的页面需要的参数，json字符串。</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<h2 id="集成小米"><a href="#集成小米" class="headerlink" title="集成小米"></a>集成小米</h2><blockquote>
+<p>不知道小米怎么想的，居然没有提供 jcenter 远程仓库自动接入。只能老老实实地导入jar啊so啊啥的然后配置相关参数。</p>
+</blockquote>
+<ol>
+<li><p>导入推送SDK</p>
+<blockquote>
+<p>将<code>MiPush_SDK_Client_3_6_9.jar</code> 复制到libs目录下，然后右键选择<code>Add as Library</code>，选择<code>app</code> 模块即可。</p>
+</blockquote>
+</li>
+<li><p>配置AndroidManifest.xml文件</p>
+<ul>
+<li><p>权限</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.WRITE_EXTERNAL_STORAGE"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.INTERNET"</span> /&gt;</span> </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.ACCESS_NETWORK_STATE"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.ACCESS_WIFI_STATE"</span> /&gt;</span> </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.READ_PHONE_STATE"</span> /&gt;</span> </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.GET_TASKS"</span> /&gt;</span> </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.VIBRATE"</span>/&gt;</span> </span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--这里com.licuong.push改成app的包名--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">permission</span> <span class="attr">android:name</span>=<span class="string">"com.licuong.push.permission.MIPUSH_RECEIVE"</span></span></span><br><span class="line"><span class="tag"><span class="attr">android:protectionLevel</span>=<span class="string">"signature"</span> /&gt;</span> </span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--这里com.licuong.push改成app的包名--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"com.licuong.push.permission.MIPUSH_RECEIVE"</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>推送服务需要配置的service和receiver</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 小米推送 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">service</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.xiaomi.push.service.XMJobService"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"false"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:permission</span>=<span class="string">"android.permission.BIND_JOB_SERVICE"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:process</span>=<span class="string">":pushservice"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">service</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.xiaomi.push.service.XMPushService"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:process</span>=<span class="string">":pushservice"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">service</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.xiaomi.mipush.sdk.PushMessageHandler"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">service</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.xiaomi.mipush.sdk.MessageHandleService"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.xiaomi.push.service.receivers.NetworkStatusReceiver"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"android.net.conn.CONNECTIVITY_CHANGE"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"android.intent.category.DEFAULT"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.xiaomi.push.service.receivers.PingReceiver"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"false"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:process</span>=<span class="string">":pushservice"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.xiaomi.push.PING_TIMER"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>自定义一个BroadcastReceiver类继承<code>com.xiaomi.mipush.sdk.PushMessageReceiver</code> 用来接受小米推送消息,然后再清单文件中进程注册。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">XiaomiPushReceiver</span> <span class="keyword">extends</span> <span class="title">PushMessageReceiver</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 接收服务器向客户端发送的透传消息</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> context</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> miPushMessage</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceivePassThroughMessage</span><span class="params">(Context context, MiPushMessage miPushMessage)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onReceivePassThroughMessage(context, miPushMessage);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 通知消息被点击了</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> context</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> miPushMessage</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNotificationMessageClicked</span><span class="params">(Context context, MiPushMessage miPushMessage)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onNotificationMessageClicked(context, miPushMessage);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">//通知被点击了之后</span></span><br><span class="line">        Map&lt;String, String&gt; extra = miPushMessage.getExtra();</span><br><span class="line">        <span class="comment">//拿到extra之后从里面拿到url和pars，然后继续解析pars后让PushService处理跳转。</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 通知消息到达客户端时触发。</span></span><br><span class="line"><span class="comment">     * 应用在前台时不弹出通知的通知消息到达客户端也会触发这个消息</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> context</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> miPushMessage</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNotificationMessageArrived</span><span class="params">(Context context, MiPushMessage miPushMessage)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onNotificationMessageArrived(context, miPushMessage);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 客户端想服务器发送注册命令后的响应结果。</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> context</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> miPushCommandMessage</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceiveRegisterResult</span><span class="params">(Context context, MiPushCommandMessage miPushCommandMessage)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onReceiveRegisterResult(context, miPushCommandMessage);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.liucong.push.receiver.push.XiaomiPushReceiver"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.xiaomi.mipush.RECEIVE_MESSAGE"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.xiaomi.mipush.MESSAGE_ARRIVED"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.xiaomi.mipush.ERROR"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>初始化小米推送</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DemoApplication</span> <span class="keyword">extends</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String APP_ID = <span class="string">"your appid"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String APP_KEY = <span class="string">"your appkey"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String TAG = <span class="string">"PUSH_XIAOMI"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onCreate();</span><br><span class="line">        <span class="comment">//初始化push推送服务</span></span><br><span class="line">        <span class="keyword">if</span>(shouldInit()) &#123;</span><br><span class="line">            MiPushClient.registerPush(<span class="keyword">this</span>, APP_ID, APP_KEY);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">shouldInit</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        ActivityManager am = ((ActivityManager) getSystemService(Context.ACTIVITY_SERVICE));</span><br><span class="line">        List&lt;RunningAppProcessInfo&gt; processInfos = am.getRunningAppProcesses();</span><br><span class="line">        String mainProcessName = getPackageName();</span><br><span class="line">        <span class="keyword">int</span> myPid = Process.myPid();</span><br><span class="line">        <span class="keyword">for</span> (RunningAppProcessInfo info : processInfos) &#123;</span><br><span class="line">            <span class="keyword">if</span> (info.pid == myPid &amp;&amp; mainProcessName.equals(info.processName)) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>到此，小米推送就基本集成完毕了，剩下的就是根据需求去查看API文档进行实现了。</p>
+</li>
+</ol>
+<h2 id="集成华为"><a href="#集成华为" class="headerlink" title="集成华为"></a>集成华为</h2><blockquote>
+<p>华为这个就集成挺繁琐的。</p>
+</blockquote>
+<ol>
+<li><p>配置maven仓库</p>
+<blockquote>
+<p>在project-app的build.gradle的allprojects.repositories节点下添加华为的仓库。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">allprojects &#123;</span><br><span class="line">    repositories &#123;</span><br><span class="line">        jcenter()</span><br><span class="line">        maven &#123; url <span class="string">"https://jitpack.io"</span> &#125;</span><br><span class="line">        maven &#123; url <span class="string">"http://developer.huawei.com/repo/"</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>配置项目依赖</p>
+<blockquote>
+<p>子工程的build.gradle文文件</p>
+</blockquote>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">	/*华为推送*/</span><br><span class="line">    compile 'com.huawei.android.hms:push:2.6.1.301'        </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>集成Agent</p>
+<blockquote>
+<p>下载<code>HMSAgent_2.6.1.302</code>,解压后双击<code>GetHMSAgent_cn.bat</code>(Windows平台)，根据提示进行输入后就会生成代码文件夹<code>copysrc</code>，里面有个java文件夹和<code>AppManifestConfig.xml</code> 文件，java文件夹直接拷贝到项目的src/main目录下，后面那个文件根据里面的内容配置项目中的AndroidManifest.xml即可。无非就是写权限啊，注册Service和Receiver啊什么的。</p>
+<p>目录大致如下。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&gt;--src</span><br><span class="line">&gt;----main</span><br><span class="line">&gt;------java</span><br><span class="line">&gt;--------com</span><br><span class="line">&gt;----------huawei</span><br><span class="line">&gt;------------android</span><br><span class="line">&gt;...</span><br><span class="line">&gt;----------liucong</span><br><span class="line">&gt;------------push</span><br><span class="line">&gt;...</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+</li>
+<li><p>配置AndroidManifest文件</p>
+<ol>
+<li><p>在application节点下增加APPID和注册相关的Activity以及Service。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- **********华为推送*************** --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">meta-data</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.huawei.hms.client.appid"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:value</span>=<span class="string">"申请的华为推送appid"</span> /&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- BridgeActivity定义了HMS-SDK中一些跳转所需要的透明页面。 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">activity</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.huawei.hms.activity.BridgeActivity"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:configChanges</span>=<span class="string">"orientation|locale|screenSize|layoutDirection|fontScale"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:excludeFromRecents</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"false"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:hardwareAccelerated</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:theme</span>=<span class="string">"@android:style/Theme.Translucent"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:name</span>=<span class="string">"hwc-theme"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:value</span>=<span class="string">"androidhwext:style/Theme.Emui.Translucent"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 用于HMS-SDK引导升级HMS，提供给系统安装器读取升级文件。 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">provider</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.huawei.hms.update.provider.UpdateProvider"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:authorities</span>=<span class="string">"xxx.xxx.xxx.hms.update.provider"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"false"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:grantUriPermissions</span>=<span class="string">"true"</span>&gt;</span><span class="tag">&lt;/<span class="name">provider</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 用来接收PUSH消息的receiver --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span> <span class="attr">android:name</span>=<span class="string">"com.liucong.push.receiver.push.HuaweiPushReceiver"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 必须,用于接收TOKEN --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.android.push.intent.REGISTRATION"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 必须，用于接收消息 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.android.push.intent.RECEIVE"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 可选，用于点击通知栏或通知栏上的按钮后触发onEvent回调 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.android.push.intent.CLICK"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 可选，查看PUSH通道是否连接，不查看则不需要 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.intent.action.PUSH_STATE"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 接收通道发来的通知栏消息 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.hms.support.api.push.PushEventReceiver"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 接收通道发来的通知栏消息 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.intent.action.PUSH"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 安装华为移动服务 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">activity</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">"com.huawei.android.hms.agent.common.HMSAgentActivity"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:configChanges</span>=<span class="string">"orientation|locale|screenSize|layoutDirection|fontScale"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:excludeFromRecents</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"false"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:hardwareAccelerated</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:theme</span>=<span class="string">"@android:style/Theme.Translucent"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta-data</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:name</span>=<span class="string">"hwc-theme"</span></span></span><br><span class="line"><span class="tag">        <span class="attr">android:value</span>=<span class="string">"androidhwext:style/Theme.Emui.Translucent"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加相关权限</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--HMS-SDK引导升级HMS功能，访问OTA服务器需要网络权限--&gt;</span>    </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.INTERNET"</span> /&gt;</span>    </span><br><span class="line"><span class="comment">&lt;!--HMS-SDK引导升级HMS功能，保存下载的升级包需要SD卡写权限--&gt;</span>    </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.WRITE_EXTERNAL_STORAGE"</span> /&gt;</span>    </span><br><span class="line"><span class="comment">&lt;!--检测网络状态--&gt;</span>  </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.ACCESS_NETWORK_STATE"</span>/&gt;</span>  </span><br><span class="line"><span class="comment">&lt;!--检测wifi状态--&gt;</span>  </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.ACCESS_WIFI_STATE"</span>/&gt;</span>  </span><br><span class="line"><span class="comment">&lt;!--为了获取用户手机的IMEI，用来唯一的标识用户。--&gt;</span>  </span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.READ_PHONE_STATE"</span>/&gt;</span> </span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--如果是安卓8.0，应用编译配置的targetSdkVersion&gt;=26，请务必添加以下权限 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">uses-permission</span> <span class="attr">android:name</span>=<span class="string">"android.permission.REQUEST_INSTALL_PACKAGES"</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加两个Receiver用于接收通知。</p>
+<blockquote>
+<p>一个是自定义广播，用来接收PUSH消息。</p>
+<p>一个是华为SDK内置的广播，接收通道发来的通知栏消息。</p>
+</blockquote>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 用来接收PUSH消息的receiver --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span> <span class="attr">android:name</span>=<span class="string">"com.liucong.push.receiver.push.HuaweiPushReceiver"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 必须,用于接收TOKEN --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.android.push.intent.REGISTRATION"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 必须，用于接收消息 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.android.push.intent.RECEIVE"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 可选，用于点击通知栏或通知栏上的按钮后触发onEvent回调 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.android.push.intent.CLICK"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 可选，查看PUSH通道是否连接，不查看则不需要 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.intent.action.PUSH_STATE"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 接收通道发来的通知栏消息 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">receiver</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.hms.support.api.push.PushEventReceiver"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 接收通道发来的通知栏消息 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"com.huawei.intent.action.PUSH"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+</li>
+<li><p>初始化Agent</p>
+<blockquote>
+<p>1.在application的onCreate方法中调用HMSAgent的init()来初始化HMSAgent。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&gt;<span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyApplication</span> <span class="keyword">extends</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line">&gt;    <span class="meta">@Override</span></span><br><span class="line">&gt;    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;        </span><br><span class="line">&gt;        <span class="keyword">super</span>.onCreate();</span><br><span class="line">&gt;        HMSAgent.init(<span class="keyword">this</span>);</span><br><span class="line">&gt;    &#125;</span><br><span class="line">&gt;&#125;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>&gt;</p>
+<blockquote>
+<p>2.在应用启动时调用Connect。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&gt;<span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainActivity</span> <span class="keyword">extends</span> <span class="title">Activity</span></span>&#123;</span><br><span class="line">&gt;    <span class="meta">@Override</span></span><br><span class="line">&gt;    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;</span><br><span class="line">&gt;        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">&gt;        ...;</span><br><span class="line">&gt;        HMSAgent.connect(<span class="keyword">this</span>, <span class="keyword">new</span> ConnectHandler() &#123;</span><br><span class="line">&gt;            <span class="meta">@Override</span></span><br><span class="line">&gt;            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onConnect</span><span class="params">(<span class="keyword">int</span> rst)</span> </span>&#123;</span><br><span class="line">&gt;                Logger.d(<span class="string">"HWPUSH"</span>, <span class="string">"连接状态码:"</span>+rst+<span class="string">""</span>);</span><br><span class="line">&gt;            &#125;</span><br><span class="line">&gt;        &#125;);</span><br><span class="line">&gt;    &#125;</span><br><span class="line">&gt;&#125;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>&gt;</p>
+<blockquote>
+<p>3.连接成功后获取应用的唯一标识token，并保存到服务器。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&gt;<span class="comment">//连接成功后调用</span></span><br><span class="line">&gt;HMSAgent.Push.getToken(<span class="keyword">new</span> GetTokenHandler() &#123;</span><br><span class="line">&gt;    <span class="meta">@Override</span></span><br><span class="line">&gt;    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onResult</span><span class="params">(<span class="keyword">int</span> rst)</span> </span>&#123;</span><br><span class="line">&gt;        <span class="comment">//token在自定义的广播接收者中接收。</span></span><br><span class="line">&gt;        Logger.d(<span class="string">"HWPUSH"</span>, <span class="string">"获取Token状态:"</span>+rst+<span class="string">""</span>);</span><br><span class="line">&gt;    &#125;</span><br><span class="line">&gt;&#125;);</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>&gt;</p>
+<blockquote>
+<p>​</p>
+</blockquote>
+</li>
+<li><p>自定义广播，用来接收PUSH消息</p>
+<blockquote>
+<p>这个广播接收者可以接收token，和服务端添加的额外的数据。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HuaweiPushReceiver</span> <span class="keyword">extends</span> <span class="title">PushReceiver</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Context context, Event event, Bundle extras)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onEvent(context, event, extras);</span><br><span class="line">        Logger.d(<span class="string">"PUSH"</span>,<span class="string">"onEvent:"</span>+event.toString());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (Event.NOTIFICATION_OPENED.equals(event) || Event.NOTIFICATION_CLICK_BTN.equals(event)) &#123;</span><br><span class="line">            <span class="keyword">int</span> notifyId = extras.getInt(BOUND_KEY.pushNotifyId, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">            <span class="comment">//取消通知</span></span><br><span class="line">            <span class="keyword">if</span> (<span class="number">0</span> != notifyId) &#123;</span><br><span class="line">                NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);</span><br><span class="line">                manager.cancel(notifyId);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//通知被点击了。</span></span><br><span class="line">        <span class="keyword">if</span> (Event.NOTIFICATION_OPENED.equals(event))&#123;</span><br><span class="line">            List&lt;Map&lt;String, String&gt;&gt; extra = <span class="keyword">new</span> ArrayList&lt;&gt;() ;</span><br><span class="line">            String message = extras.getString(BOUND_KEY.pushMsgKey);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span>(!TextUtils.isEmpty(message))&#123;</span><br><span class="line">                extra = <span class="keyword">new</span> Gson().fromJson(message,extra.getClass());</span><br><span class="line">                <span class="keyword">if</span>(extra!=<span class="keyword">null</span> &amp;&amp; extra.size()&gt;<span class="number">0</span>)&#123;</span><br><span class="line"></span><br><span class="line">                    String url = <span class="string">""</span>;</span><br><span class="line">                    String pars = <span class="string">""</span>;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">for</span>(Map&lt;String, String&gt; map:extra)&#123;</span><br><span class="line">                        <span class="keyword">if</span>(map.containsKey(<span class="string">"url"</span>))&#123;</span><br><span class="line">                            url = map.get(<span class="string">"url"</span>);</span><br><span class="line">                            Logger.d(<span class="string">"Logger"</span>,<span class="string">"华为推送，解析的url是:"</span>+url);</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                        <span class="comment">//参数</span></span><br><span class="line">                        <span class="keyword">if</span>(map.containsKey(<span class="string">"pars"</span>))&#123;</span><br><span class="line">                            pars = map.get(<span class="string">"pars"</span>);</span><br><span class="line">                            Logger.d(<span class="string">"Logger"</span>,<span class="string">"华为推送，解析的pars是:"</span>+pars);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">//遍历结束后应该就都有值了</span></span><br><span class="line">                    <span class="keyword">if</span>(!TextUtils.isEmpty(url))&#123;</span><br><span class="line">                        Map&lt;String,String&gt; params = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">                        <span class="keyword">if</span>(!TextUtils.isEmpty(pars))&#123;</span><br><span class="line">                            <span class="keyword">try</span>&#123;</span><br><span class="line">                                params = <span class="keyword">new</span> Gson().fromJson(pars,params.getClass());</span><br><span class="line">                            &#125;<span class="keyword">catch</span> (Exception e)&#123;</span><br><span class="line">                                Logger.d(<span class="string">"华为推送，解析pars失败:"</span>+e.getMessage());</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                        <span class="comment">//拿到数据之后就可以跳转到指定页面了。</span></span><br><span class="line">                        PushService.getInstance().handleReceiveMessage(context,url,params);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onToken</span><span class="params">(Context context, String token, Bundle extras)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onToken(context, token, extras);</span><br><span class="line">        Logger.d(<span class="string">"PUSH"</span>,<span class="string">"onToken:"</span>+token);</span><br><span class="line">        <span class="comment">//将华为手机的推送token提交到服务器</span></span><br><span class="line">        postPhoneBrand(token);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onPushMsg</span><span class="params">(Context context, <span class="keyword">byte</span>[] msgBytes, Bundle extras)</span> </span>&#123;</span><br><span class="line">        Logger.d(<span class="string">"PUSH"</span>,<span class="string">"onPushMsg:"</span>+msgBytes);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.onPushMsg(context, msgBytes, extras);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onPushState</span><span class="params">(Context context, <span class="keyword">boolean</span> pushState)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onPushState(context, pushState);</span><br><span class="line">        Logger.d(<span class="string">"PUSH"</span>,<span class="string">"onPushState:"</span>+pushState);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">postPhoneBrand</span><span class="params">(String token)</span></span>&#123;</span><br><span class="line">       </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>华为推送点击通知默认是打开APP主页，如果需要打开指定页面，则需要创建一个Activity并且配置好相关参数例如host，scheme和path什么的，实际上可以以这个Activity为跳板解析出推送过来的数据然后再作跳转，但是那样太麻烦了。后来就根据后台添加的额外字段来控制跳转到不同的页面，所以那个跳转的页面在onCreate中直接调用finish关闭了。剩下的等自定义广播接收者拿到额外的数据后再进行跳转，这样集成几个推送处理跳转都比较方便。</p>
+<blockquote>
+<p>以下是那个Activity示例。其中scheme和host以及path都可以自己随便设置。</p>
+</blockquote>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">activity</span> <span class="attr">android:name</span>=<span class="string">".act.HuaweiEmptyActivity"</span></span></span><br><span class="line"><span class="tag">          <span class="attr">android:screenOrientation</span>=<span class="string">"portrait"</span></span></span><br><span class="line">    &lt;intent-filter&gt;</span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"android.intent.action.VIEW"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"android.intent.category.DEFAULT"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">data</span> <span class="attr">android:scheme</span>=<span class="string">"liucong"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">android:host</span>=<span class="string">"com.liucong.push"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">android:path</span>=<span class="string">"/push_notify"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">activity</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>后台服务器推送的时候那个填写的intentUri获取方式如下</p>
+<p><code>push_notify?</code>后面的那个<code>message=test</code> 这个是后台传的，可以指定这些参数来跳转到不同的页面。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent(Intent.ACTION_VIEW, Uri.parse(<span class="string">"liucong://com.liucong.push/push_notify?message=test"</span>));</span><br><span class="line">intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);</span><br><span class="line">String intentUri = intent.toUri(Intent.URI_INTENT_SCHEME);</span><br><span class="line">Logger.e(<span class="string">"Logger"</span>,<span class="string">"action是:"</span> + intentUri);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="集成极光"><a href="#集成极光" class="headerlink" title="集成极光"></a>集成极光</h2><blockquote>
+<p>极光是集成最简单的一个。</p>
+</blockquote>
+<ol>
+<li><p>在 module 的 gradle 中添加依赖</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">    ......</span><br><span class="line">    compile 'cn.jiguang.sdk:jpush:3.1.5'</span><br><span class="line">    compile 'cn.jiguang.sdk:jcore:1.2.3'</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在module 的 gradle的android 节点下的defaultConfig 子节点中新增ndk和替换变量。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">ndk &#123;</span><br><span class="line">    //根据需要 自行选择添加的对应cpu类型的.so库。</span><br><span class="line">    abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a'</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">manifestPlaceholders = [</span><br><span class="line">    JPUSH_PKGNAME: applicationId,</span><br><span class="line">    JPUSH_APPKEY : "极光appkey",</span><br><span class="line">    JPUSH_CHANNEL: "developer-default",</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>自定义广播接收者接收极光推送消息,在清单文件中进行配置。</p>
+<blockquote>
+<p>和华为的一样，当接收者接收到action为<code>JPushInterface.ACTION_NOTIFICATION_OPENED</code> 的广播的时候就从附加参数中拿到url和pars然后交由PushService统一处理跳转逻辑。</p>
+</blockquote>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">receiver</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:name</span>=<span class="string">".receiver.push.JiguangPushReceiver"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:enabled</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">android:exported</span>=<span class="string">"false"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">&lt;!-- Required 用户注册SDK的intent --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"cn.jpush.android.intent.REGISTRATION"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- Required 用户接收SDK消息的intent --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"cn.jpush.android.intent.MESSAGE_RECEIVED"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- Required 用户接收SDK通知栏信息的intent --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"cn.jpush.android.intent.NOTIFICATION_RECEIVED"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- Required 用户打开自定义通知栏的intent --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"cn.jpush.android.intent.NOTIFICATION_OPENED"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 接收网络变化 连接/断开 since 1.6.3 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"cn.jpush.android.intent.CONNECTION"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"项目包名"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">receiver</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JiguangPushReceiver</span> <span class="keyword">extends</span> <span class="title">BroadcastReceiver</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String TAG = <span class="string">"JiguangPushReceiver"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceive</span><span class="params">(Context context, Intent intent)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Bundle bundle = intent.getExtras();</span><br><span class="line">            Logger.d(TAG, <span class="string">"[MyReceiver] onReceive - "</span> + intent.getAction() + <span class="string">", extras: "</span> + printBundle(bundle));</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (JPushInterface.ACTION_REGISTRATION_ID.equals(intent.getAction())) &#123;</span><br><span class="line">                String regId = bundle.getString(JPushInterface.EXTRA_REGISTRATION_ID);</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] 接收Registration Id : "</span> + regId);</span><br><span class="line">                <span class="comment">//send the Registration Id to your server...</span></span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (JPushInterface.ACTION_MESSAGE_RECEIVED.equals(intent.getAction())) &#123;</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] 接收到推送下来的自定义消息: "</span> + bundle.getString(JPushInterface.EXTRA_MESSAGE));</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (JPushInterface.ACTION_NOTIFICATION_RECEIVED.equals(intent.getAction())) &#123;</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] 接收到推送下来的通知"</span>);</span><br><span class="line">                <span class="keyword">int</span> notifactionId = bundle.getInt(JPushInterface.EXTRA_NOTIFICATION_ID);</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] 接收到推送下来的通知的ID: "</span> + notifactionId);</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (JPushInterface.ACTION_NOTIFICATION_OPENED.equals(intent.getAction())) &#123;</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] 用户点击打开了通知"</span>);</span><br><span class="line"></span><br><span class="line">                <span class="comment">//打开自定义的Activity</span></span><br><span class="line">                <span class="comment">//拿到额外的参数</span></span><br><span class="line">                String extras = bundle.getString(JPushInterface.EXTRA_EXTRA);</span><br><span class="line">                Map&lt;String,String&gt; extraMap = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">                extraMap = <span class="keyword">new</span> Gson().fromJson(extras, extraMap.getClass());</span><br><span class="line"></span><br><span class="line">                Logger.d(TAG,<span class="string">"附加参数:"</span>+extraMap.toString());</span><br><span class="line"></span><br><span class="line">                String url = <span class="string">""</span>;</span><br><span class="line">                String pars = <span class="string">""</span>;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span>(extraMap.containsKey(<span class="string">"url"</span>))&#123;</span><br><span class="line">                    url = extraMap.get(<span class="string">"url"</span>);</span><br><span class="line">                    Logger.d(<span class="string">"Logger"</span>,<span class="string">"极光推送，解析的url是:"</span>+url);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//参数</span></span><br><span class="line">                <span class="keyword">if</span>(extraMap.containsKey(<span class="string">"pars"</span>))&#123;</span><br><span class="line">                    pars = extraMap.get(<span class="string">"pars"</span>);</span><br><span class="line">                    Logger.d(<span class="string">"Logger"</span>,<span class="string">"极光推送，解析的pars是:"</span>+pars);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//统一让客户端处理。</span></span><br><span class="line">                Map&lt;String,String&gt; params = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">                <span class="keyword">if</span>(!TextUtils.isEmpty(pars))&#123;</span><br><span class="line">                    <span class="keyword">try</span>&#123;</span><br><span class="line">                        params = <span class="keyword">new</span> Gson().fromJson(pars,params.getClass());</span><br><span class="line">                    &#125;<span class="keyword">catch</span> (Exception e)&#123;</span><br><span class="line">                        Logger.d(<span class="string">"华为推送，解析pars失败:"</span>+e.getMessage());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//跳转</span></span><br><span class="line">                <span class="keyword">if</span>(!TextUtils.isEmpty(url))&#123;</span><br><span class="line">                    PushService.getInstance().handleReceiveMessage(context,url,params);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (JPushInterface.ACTION_RICHPUSH_CALLBACK.equals(intent.getAction())) &#123;</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] 用户收到到RICH PUSH CALLBACK: "</span> + bundle.getString(JPushInterface.EXTRA_EXTRA));</span><br><span class="line">                <span class="comment">//在这里根据 JPushInterface.EXTRA_EXTRA 的内容处理代码，比如打开新的Activity， 打开一个网页等..</span></span><br><span class="line"></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span>(JPushInterface.ACTION_CONNECTION_CHANGE.equals(intent.getAction())) &#123;</span><br><span class="line">                <span class="keyword">boolean</span> connected = intent.getBooleanExtra(JPushInterface.EXTRA_CONNECTION_CHANGE, <span class="keyword">false</span>);</span><br><span class="line">                Logger.w(TAG, <span class="string">"[MyReceiver]"</span> + intent.getAction() +<span class="string">" connected state change to "</span>+connected);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                Logger.d(TAG, <span class="string">"[MyReceiver] Unhandled intent - "</span> + intent.getAction());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e)&#123;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>初始化</p>
+<blockquote>
+<p>初始化极光推送</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">JPushInterface.setDebugMode(<span class="keyword">true</span>);</span><br><span class="line">JPushInterface.init(<span class="keyword">this</span>);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h1 id="实际集成代码"><a href="#实际集成代码" class="headerlink" title="实际集成代码"></a>实际集成代码</h1><blockquote>
+<p>最终采用的是小米设备只集成小米推送，华为设备只集成华为推送，其他设备只集成极光推送。</p>
+</blockquote>
+<ol>
+<li><p>首先判断机型。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Rom</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String TAG = <span class="string">"Rom"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_MIUI = <span class="string">"xiaomi"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_EMUI = <span class="string">"huawei"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_FLYME = <span class="string">"meizu"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_OPPO = <span class="string">"oppo"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_SMARTISAN = <span class="string">"chuizi"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_VIVO = <span class="string">"vivo"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_QIKU = <span class="string">"360"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ROM_OTHER = <span class="string">"other"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String KEY_VERSION_MIUI = <span class="string">"ro.miui.ui.version.name"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String KEY_VERSION_EMUI = <span class="string">"ro.build.version.emui"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String KEY_VERSION_OPPO = <span class="string">"ro.build.version.opporom"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String KEY_VERSION_SMARTISAN = <span class="string">"ro.smartisan.version"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String KEY_VERSION_VIVO = <span class="string">"ro.vivo.os.version"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String sName;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String sVersion;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String mRom;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isEmui</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_EMUI);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isMiui</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_MIUI);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isVivo</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_VIVO);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">getRomName</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(TextUtils.isEmpty(mRom))&#123;</span><br><span class="line">            <span class="keyword">return</span> mRom;</span><br><span class="line">        &#125;</span><br><span class="line">        String rom = <span class="string">""</span>;</span><br><span class="line">        <span class="keyword">if</span>(isMiui())&#123;</span><br><span class="line">            rom = ROM_MIUI;</span><br><span class="line">        &#125;<span class="keyword">else</span> <span class="keyword">if</span>(isEmui())&#123;</span><br><span class="line">            rom = ROM_EMUI;</span><br><span class="line">        &#125;<span class="keyword">else</span> <span class="keyword">if</span>(isOppo())&#123;</span><br><span class="line">            rom = ROM_OPPO;</span><br><span class="line">        &#125;<span class="keyword">else</span> <span class="keyword">if</span>(isVivo())&#123;</span><br><span class="line">            rom = ROM_VIVO;</span><br><span class="line">        &#125;<span class="keyword">else</span> <span class="keyword">if</span>(is360())&#123;</span><br><span class="line">            rom = ROM_QIKU;</span><br><span class="line">        &#125;<span class="keyword">else</span> <span class="keyword">if</span>(isFlyme())&#123;</span><br><span class="line">            rom = ROM_FLYME;</span><br><span class="line">        &#125;<span class="keyword">else</span> <span class="keyword">if</span>(isSmartisan())&#123;</span><br><span class="line">            rom = ROM_SMARTISAN;</span><br><span class="line">        &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">            rom = getName();</span><br><span class="line">        &#125;</span><br><span class="line">        mRom = rom;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> rom;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isOppo</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_OPPO);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isFlyme</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_FLYME);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">is360</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_QIKU) || check(<span class="string">"360"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isSmartisan</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> check(ROM_SMARTISAN);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (sName == <span class="keyword">null</span>) &#123;</span><br><span class="line">            check(<span class="string">""</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">getVersion</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (sVersion == <span class="keyword">null</span>) &#123;</span><br><span class="line">            check(<span class="string">""</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sVersion;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">check</span><span class="params">(String rom)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (sName != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> sName.equals(rom);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_MIUI))) &#123;</span><br><span class="line">            sName = ROM_MIUI;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_EMUI))) &#123;</span><br><span class="line">            sName = ROM_EMUI;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_OPPO))) &#123;</span><br><span class="line">            sName = ROM_OPPO;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_VIVO))) &#123;</span><br><span class="line">            sName = ROM_VIVO;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!TextUtils.isEmpty(sVersion = getProp(KEY_VERSION_SMARTISAN))) &#123;</span><br><span class="line">            sName = ROM_SMARTISAN;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            sVersion = Build.DISPLAY;</span><br><span class="line">            <span class="keyword">if</span> (sVersion.toUpperCase().contains(ROM_FLYME)) &#123;</span><br><span class="line">                sName = ROM_FLYME;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                sVersion = Build.UNKNOWN;</span><br><span class="line">                sName = ROM_OTHER;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sName.equals(rom);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">getProp</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        String line = <span class="keyword">null</span>;</span><br><span class="line">        BufferedReader input = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Process p = Runtime.getRuntime().exec(<span class="string">"getprop "</span> + name);</span><br><span class="line">            input = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(p.getInputStream()), <span class="number">1024</span>);</span><br><span class="line">            line = input.readLine();</span><br><span class="line">            input.close();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException ex) &#123;</span><br><span class="line">            Log.e(TAG, <span class="string">"Unable to read prop "</span> + name, ex);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (input != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    input.close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> line;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在Application中根据机型初始化推送</p>
+<blockquote>
+<p>这里就是初始化对应推送。</p>
+<p><strong>需要注意的是，华为推送需要调用connect时才会接收到推送消息。这点和其他推送有点区别。</strong></p>
+<p>关闭其他推送，这个关闭是可选的，因为为了方便测试，我弄了点测试代码可以很方便切换推送平台，重启就生效。所以为了避免重复接收到推送，需要初始化一种推送的时候取消或者关闭其他推送。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(Rom.isEmui())&#123;</span><br><span class="line">    <span class="comment">//初始化华为</span></span><br><span class="line">    initHuaweiPush();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//关闭或取消其他推送</span></span><br><span class="line">    <span class="comment">//MiPushClient.disablePush(this);</span></span><br><span class="line">    <span class="comment">//JPushInterface.stopPush(this);</span></span><br><span class="line">    <span class="comment">//PushManager.unRegister(this,PushService.MEIZU_APP_ID, PushService.MEIZU_APP_KEY);</span></span><br><span class="line">&#125;<span class="keyword">else</span> <span class="keyword">if</span>(Rom.isMiui())&#123;</span><br><span class="line">    <span class="comment">//初始化小米</span></span><br><span class="line">    initXiaomiPush();</span><br><span class="line">    <span class="comment">//关闭或取消其他推送</span></span><br><span class="line">    <span class="comment">//PushManager.unRegister(this,PushService.MEIZU_APP_ID, PushService.MEIZU_APP_KEY);</span></span><br><span class="line">    <span class="comment">//JPushInterface.stopPush(this);</span></span><br><span class="line">&#125;<span class="keyword">else</span> <span class="keyword">if</span>(Rom.isFlyme())&#123;</span><br><span class="line">    <span class="comment">//初始化魅族</span></span><br><span class="line">    initMeizuPush();</span><br><span class="line">    <span class="comment">//关闭或取消其他推送</span></span><br><span class="line">    <span class="comment">//MiPushClient.disablePush(this);</span></span><br><span class="line">    <span class="comment">//JPushInterface.stopPush(this);</span></span><br><span class="line">&#125; <span class="keyword">else</span>&#123;</span><br><span class="line">    <span class="comment">//初始化极光</span></span><br><span class="line">    initJiguangPush();</span><br><span class="line">    <span class="comment">//关闭或取消其他推送</span></span><br><span class="line">    <span class="comment">//MiPushClient.disablePush(this);</span></span><br><span class="line">    <span class="comment">//PushManager.unRegister(this,PushService.MEIZU_APP_ID, PushService.MEIZU_APP_KEY);</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>​</p>
+</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    liucong
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http:www.iliucong.tech/2018/08/12/push-deploy/" title="项目推送集成">http:www.iliucong.tech/2018/08/12/push-deploy/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag"># Android</a>
+          
+            <a href="/tags/推送/" rel="tag"># 推送</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/07/17/eventbus/" rel="next" title="EventBus简单执行流程梳理">
+                <i class="fa fa-chevron-left"></i> EventBus简单执行流程梳理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/08/16/my-cat-misses-you/" rel="prev" title="我和我的猫">
+                我和我的猫 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          
+            <img class="site-author-image" itemprop="image"
+              src="https://upload-images.jianshu.io/upload_images/9395318-b6b38add955841db.jpg"
+              alt="liucong" />
+          
+            <p class="site-author-name" itemprop="name">liucong</p>
+            <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+            
+              <a href="/archives/">
+            
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+       
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="mailto:litchiily@gmail.com" target="_blank" title="E-Mail">
+                  E-Mail</a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons" />
+            </a>
+          </div>
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#集成小米"><span class="nav-number">1.</span> <span class="nav-text">集成小米</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#集成华为"><span class="nav-number">2.</span> <span class="nav-text">集成华为</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#集成极光"><span class="nav-number">3.</span> <span class="nav-text">集成极光</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#实际集成代码"><span class="nav-number"></span> <span class="nav-text">实际集成代码</span></a></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2017 &mdash; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-random"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">liucong</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+  <span class="post-meta-divider">|</span>
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.2</div>
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+  
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
